@@ -6,6 +6,7 @@ import { ArrowUpRight, ArrowDownLeft, Clock, Settings, LogOut, Copy, Check } fro
 import { getCurrentUser, getWallet, getTransactions, clearAllData } from '@/utils/storage';
 import { formatAddress, ethToUsd } from '@/utils/wallet';
 import { toast } from 'react-hot-toast';
+import { SecurityDisclaimer } from '@/components/SecurityDisclaimer';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -85,6 +86,9 @@ const Dashboard = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Security Disclaimer */}
+        <SecurityDisclaimer />
+
         {/* Balance Card */}
         <Card className="p-8 bg-gradient-to-br from-primary/20 to-accent/20 border-primary/30 mb-6">
           <div className="text-center">

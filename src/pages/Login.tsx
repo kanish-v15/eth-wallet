@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Wallet } from 'lucide-react';
 import { getCurrentUser, setCurrentUser, getWallet } from '@/utils/storage';
 import { toast } from 'react-hot-toast';
+import { loginFormSchema, getValidationError } from '@/utils/validation';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -16,15 +17,21 @@ const Login = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
+    // Validate inputs using Zod schema
+    const validation = loginFormSchema.safeParse({
+      email,
+      password,
+    });
+
+    if (!validation.success) {
+      toast.error(getValidationError(validation.error));
       return;
     }
 
     // Simple mock login - just save to localStorage
     const user = {
-      email,
-      username: email.split('@')[0],
+      email: validation.data.email,
+      username: validation.data.email.split('@')[0],
       userId: 'user_' + Math.random().toString(36).substr(2, 9),
       isLoggedIn: true,
     };

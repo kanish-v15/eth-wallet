@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Wallet } from 'lucide-react';
+import { Wallet, AlertCircle } from 'lucide-react';
 import { setCurrentUser } from '@/utils/storage';
 import { toast } from 'react-hot-toast';
+import { signupFormSchema, getValidationError } from '@/utils/validation';
 
 const Signup = () => {
   const [email, setEmail] = useState('');
@@ -18,20 +19,23 @@ const Signup = () => {
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !username || !password || !confirmPassword) {
-      toast.error('Please fill in all fields');
-      return;
-    }
+    // Validate all inputs using Zod schema
+    const validation = signupFormSchema.safeParse({
+      email,
+      username,
+      password,
+      confirmPassword,
+    });
 
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+    if (!validation.success) {
+      toast.error(getValidationError(validation.error));
       return;
     }
 
     // Simple mock signup - just save to localStorage
     const user = {
-      email,
-      username,
+      email: validation.data.email,
+      username: validation.data.username,
       userId: 'user_' + Math.random().toString(36).substr(2, 9),
       isLoggedIn: true,
     };
@@ -53,6 +57,22 @@ const Signup = () => {
         </div>
 
         <form onSubmit={handleSignup} className="space-y-6">
+          {/* Password Requirements Info */}
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-primary">
+                <p className="font-semibold mb-1">Password Requirements:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-primary/90">
+                  <li>At least 12 characters long</li>
+                  <li>Contains uppercase and lowercase letters</li>
+                  <li>Contains at least one number</li>
+                  <li>Contains at least one special character</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="email" className="text-foreground">Email</Label>
             <Input

@@ -3,16 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { AlertCircle, Download, Upload, Copy, Check } from 'lucide-react';
+import { AlertCircle, Download, Upload, Copy, Check, Eye, EyeOff } from 'lucide-react';
 import { generateWallet, importWallet } from '@/utils/wallet';
 import { setWallet } from '@/utils/storage';
 import { toast } from 'react-hot-toast';
+import { mnemonicSchema, getValidationError } from '@/utils/validation';
 
 const WalletSetup = () => {
   const [mode, setMode] = useState<'select' | 'create' | 'import'>('select');
   const [mnemonic, setMnemonic] = useState('');
   const [importWords, setImportWords] = useState<string[]>(Array(12).fill(''));
   const [copied, setCopied] = useState(false);
+  const [mnemonicVisible, setMnemonicVisible] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const navigate = useNavigate();
 
   const handleCreateWallet = () => {
@@ -24,6 +27,11 @@ const WalletSetup = () => {
   const handleSaveWallet = () => {
     if (!mnemonic) return;
     
+    if (!confirmed) {
+      toast.error('Please confirm that you have saved your recovery phrase');
+      return;
+    }
+    
     const wallet = generateWallet();
     setWallet(wallet);
     toast.success('Wallet created successfully!');
@@ -31,7 +39,15 @@ const WalletSetup = () => {
   };
 
   const handleImportWallet = () => {
-    const phrase = importWords.join(' ');
+    const phrase = importWords.join(' ').toLowerCase().trim();
+    
+    // Validate mnemonic format
+    const validation = mnemonicSchema.safeParse(phrase);
+    if (!validation.success) {
+      toast.error(getValidationError(validation.error));
+      return;
+    }
+
     const wallet = importWallet(phrase);
     
     if (wallet) {
@@ -39,7 +55,7 @@ const WalletSetup = () => {
       toast.success('Wallet imported successfully!');
       navigate('/dashboard');
     } else {
-      toast.error('Invalid mnemonic phrase');
+      toast.error('Invalid mnemonic phrase. Please check and try again.');
     }
   };
 
@@ -107,18 +123,66 @@ const WalletSetup = () => {
           <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 mb-6 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
             <div className="text-sm">
-              <p className="text-destructive font-semibold mb-1">Warning!</p>
-              <p className="text-destructive/90">Never share your recovery phrase with anyone. Anyone with these words can access your funds.</p>
+              <p className="text-destructive font-semibold mb-1">Critical Security Warning!</p>
+              <ul className="list-disc list-inside space-y-1 text-destructive/90">
+                <li>Never share your recovery phrase with anyone</li>
+                <li>Anyone with these words can access your funds</li>
+                <li>Write it down on paper - do not store digitally</li>
+                <li>Keep it in a secure location</li>
+                <li>Do not take screenshots</li>
+              </ul>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="mb-4 flex items-center justify-between">
+            <label className="text-sm text-muted-foreground font-semibold">Recovery Phrase</label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setMnemonicVisible(!mnemonicVisible)}
+              className="text-primary hover:text-accent"
+            >
+              {mnemonicVisible ? (
+                <>
+                  <EyeOff className="w-4 h-4 mr-2" />
+                  Hide
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Reveal
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-6 relative">
+            {!mnemonicVisible && (
+              <div className="absolute inset-0 backdrop-blur-md bg-background/30 rounded-lg flex items-center justify-center z-10">
+                <p className="text-muted-foreground font-semibold">Click "Reveal" to see your phrase</p>
+              </div>
+            )}
             {words.map((word, index) => (
               <div key={index} className="bg-secondary border border-border rounded-lg p-3 flex items-center gap-2">
                 <span className="text-muted-foreground text-sm font-mono">{index + 1}.</span>
                 <span className="text-foreground font-medium">{word}</span>
               </div>
             ))}
+          </div>
+
+          <div className="bg-secondary border border-border rounded-lg p-4 mb-6">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+                className="w-5 h-5 rounded border-border"
+              />
+              <span className="text-sm text-foreground">
+                I have written down my recovery phrase and stored it securely
+              </span>
+            </label>
           </div>
 
           <div className="flex gap-3">
@@ -133,8 +197,9 @@ const WalletSetup = () => {
             <Button 
               className="flex-1 bg-gradient-to-r from-primary to-accent text-primary-foreground"
               onClick={handleSaveWallet}
+              disabled={!confirmed}
             >
-              I've Saved My Phrase
+              Continue to Wallet
             </Button>
           </div>
         </Card>

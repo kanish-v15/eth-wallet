@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, AlertCircle } from 'lucide-react';
 import { getWallet, getCurrentUser, addTransaction } from '@/utils/storage';
 import { ethToUsd, usdToEth, signMessage } from '@/utils/wallet';
 import { toast } from 'react-hot-toast';
+import { sendTransactionSchema, getValidationError } from '@/utils/validation';
+import { ethers } from 'ethers';
 
 const Send = () => {
   const navigate = useNavigate();
@@ -44,17 +46,24 @@ const Send = () => {
   }, [showModal, countdown]);
 
   const handleReview = () => {
-    if (!recipient || !amount) {
-      toast.error('Please fill in all fields');
+    // Validate inputs using Zod schema
+    const validation = sendTransactionSchema.safeParse({
+      recipient,
+      amount: currency === 'ETH' ? amount : usdToEth(amount),
+    });
+
+    if (!validation.success) {
+      toast.error(getValidationError(validation.error));
+      return;
+    }
+
+    // Additional security check: verify address checksum
+    if (!ethers.utils.isAddress(recipient)) {
+      toast.error('Invalid Ethereum address format');
       return;
     }
 
     const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      toast.error('Invalid amount');
-      return;
-    }
-
     if (wallet) {
       const ethAmount = currency === 'ETH' ? amountNum : parseFloat(usdToEth(amount));
       if (ethAmount > parseFloat(wallet.balance)) {
@@ -102,8 +111,7 @@ const Send = () => {
       toast.success('Transaction sent successfully!');
       navigate('/dashboard');
     } catch (error) {
-      toast.error('Transaction failed');
-      console.error(error);
+      toast.error('Transaction failed. Please try again.');
     } finally {
       setIsSigning(false);
     }
@@ -130,6 +138,15 @@ const Send = () => {
 
         <Card className="p-8 bg-card border-border">
           <h1 className="text-3xl font-bold text-foreground mb-6">Send Transaction</h1>
+
+          {/* Security Warning */}
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 mb-6 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="text-destructive font-semibold mb-1">Security Notice</p>
+              <p className="text-destructive/90">Always verify the recipient address. Transactions cannot be reversed.</p>
+            </div>
+          </div>
 
           <div className="space-y-6">
             <div className="space-y-2">

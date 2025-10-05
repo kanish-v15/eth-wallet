@@ -39,7 +39,9 @@ const Receive = () => {
           },
         },
         (error) => {
-          if (error) console.error(error);
+          if (error) {
+            toast.error('Failed to generate QR code');
+          }
         }
       );
     }
@@ -59,7 +61,10 @@ const Receive = () => {
       navigator.share({
         title: 'My Wallet Address',
         text: `Send ETH to: ${wallet.address}`,
-      }).catch((error) => console.log('Error sharing:', error));
+      }).catch(() => {
+        // If sharing fails, fallback to copy
+        handleCopyAddress();
+      });
     } else {
       handleCopyAddress();
     }
