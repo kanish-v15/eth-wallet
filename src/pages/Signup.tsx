@@ -5,24 +5,32 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Wallet, AlertCircle } from 'lucide-react';
-import { setCurrentUser } from '@/utils/storage';
 import { toast } from 'react-hot-toast';
 import { signupFormSchema, getValidationError } from '@/utils/validation';
+import { authApi, handleApiError } from '@/utils/api';
 
 const Signup = () => {
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    e.stopPropagation();
+
+    // Prevent double submission
+    if (isLoading) {
+      return;
+    }
+
     // Validate all inputs using Zod schema
     const validation = signupFormSchema.safeParse({
       email,
-      username,
+      username: firstName, // Reuse username field for firstName validation
       password,
       confirmPassword,
     });
@@ -32,17 +40,37 @@ const Signup = () => {
       return;
     }
 
-    // Simple mock signup - just save to localStorage
-    const user = {
-      email: validation.data.email,
-      username: validation.data.username,
-      userId: 'user_' + Math.random().toString(36).substr(2, 9),
-      isLoggedIn: true,
-    };
+    if (!lastName.trim()) {
+      toast.error('Last name is required');
+      return;
+    }
 
-    setCurrentUser(user);
-    toast.success('Account created! Let\'s set up your wallet.');
-    navigate('/wallet-setup');
+    setIsLoading(true);
+
+    try {
+      // STEP 1: CREATE USER ACCOUNT
+      const signupResponse = await authApi.signup(
+        validation.data.email,
+        password,
+        firstName.trim(),
+        lastName.trim()
+      );
+
+      if (!signupResponse.success) {
+        toast.error(signupResponse.message || 'Signup failed');
+        setIsLoading(false);
+        return;
+      }
+
+      // STEP 2: DO NOT AUTO-LOGIN - Redirect to login page
+      // This ensures proper authentication flow
+      toast.success('Account created successfully! Please sign in. 🔥');
+      navigate('/login');
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      toast.error(errorMessage);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,7 +84,7 @@ const Signup = () => {
           <p className="text-muted-foreground mt-2">Join Web3 Wallet today</p>
         </div>
 
-        <form onSubmit={handleSignup} className="space-y-6">
+        <form onSubmit={handleSignup} className="space-y-6" noValidate>
           {/* Password Requirements Info */}
           <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
             <div className="flex items-start gap-3">
@@ -82,18 +110,36 @@ const Signup = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="bg-input border-border text-foreground"
+              disabled={isLoading}
+              autoComplete="email"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-foreground">Username</Label>
+            <Label htmlFor="firstName" className="text-foreground">First Name</Label>
             <Input
-              id="username"
+              id="firstName"
               type="text"
-              placeholder="johndoe"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              placeholder="John"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               className="bg-input border-border text-foreground"
+              disabled={isLoading}
+              autoComplete="given-name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="lastName" className="text-foreground">Last Name</Label>
+            <Input
+              id="lastName"
+              type="text"
+              placeholder="Doe"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="bg-input border-border text-foreground"
+              disabled={isLoading}
+              autoComplete="family-name"
             />
           </div>
 
@@ -106,6 +152,8 @@ const Signup = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="bg-input border-border text-foreground"
+              disabled={isLoading}
+              autoComplete="new-password"
             />
           </div>
 
@@ -118,14 +166,17 @@ const Signup = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="bg-input border-border text-foreground"
+              disabled={isLoading}
+              autoComplete="new-password"
             />
           </div>
 
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold hover:opacity-90 transition-opacity"
+            disabled={isLoading}
           >
-            Create Account
+            {isLoading ? 'Creating Account...' : 'Create Account'}
           </Button>
         </form>
 

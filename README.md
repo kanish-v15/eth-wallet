@@ -1,73 +1,144 @@
-# Welcome to your Lovable project
+# Web3 Wallet
 
-## Project info
+A modern, secure Ethereum wallet application built with React and TypeScript. Manage your crypto assets, send transactions, and interact with the Ethereum blockchain seamlessly.
 
-**URL**: https://lovable.dev/projects/5578d72b-9e1a-46ae-b6e9-74a3e74caee0
+## Features
 
-## How can I edit this code?
+### 🔐 Authentication
+- Secure user registration and login
+- JWT token-based authentication
+- Profile management with personal information
 
-There are several ways of editing your application.
+### 💰 Wallet Management
+- Create new Ethereum wallets
+- Import existing wallets with 12-word recovery phrases
+- Multiple wallet support
+- Real-time balance tracking
+- Primary wallet designation
 
-**Use Lovable**
+### 💸 Transactions
+- Send ETH and USD-denominated transactions
+- Real-time ETH price integration
+- Transaction history and details
+- Secure message signing with mnemonics
+- Transaction status tracking
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5578d72b-9e1a-46ae-b6e9-74a3e74caee0) and start prompting.
+### 📊 Dashboard
+- Live wallet balance display
+- Recent transaction overview
+- Quick navigation to all features
+- Real-time ETH/USD conversion
 
-Changes made via Lovable will be committed automatically to this repo.
+### 🔒 Security
+- Client-side wallet generation
+- Secure mnemonic phrase handling
+- Message signing for transaction verification
+- Local storage for wallet data
 
-**Use your preferred IDE**
+## Tech Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Frontend**: React 18, TypeScript, Vite
+- **UI Components**: shadcn/ui, Tailwind CSS
+- **Blockchain**: ethers.js v5
+- **Validation**: Zod schemas
+- **HTTP Client**: Axios with interceptors
+- **Routing**: React Router DOM
+- **Notifications**: react-hot-toast
+- **QR Codes**: qrcode library
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Getting Started
 
-Follow these steps:
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Backend API server running
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Installation
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. Create `.env` file with your backend URL:
+   ```
+   VITE_API_BASE_URL=https://your-backend-url.com/api
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:5173](http://localhost:5173) in your browser
+
+## Project Structure
+
+```
+src/
+├── components/ui/     # Reusable UI components
+├── pages/            # Application pages
+├── utils/            # Utility functions
+│   ├── api.ts        # API service layer
+│   ├── storage.ts    # Local storage management
+│   ├── validation.ts # Zod schemas
+│   └── wallet.ts     # Ethereum wallet utilities
+└── App.tsx           # Main application component
 ```
 
-**Edit a file directly in GitHub**
+## Key Pages
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- **Login/Signup**: User authentication
+- **Dashboard**: Main wallet overview
+- **Send**: Transaction creation and sending
+- **Receive**: Wallet address and QR code display
+- **History**: Transaction history with details
+- **Wallets**: Multi-wallet management
+- **Profile**: User profile management
 
-**Use GitHub Codespaces**
+## API Integration
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The application integrates with a Flask-based backend API for:
+- User authentication and profile management
+- Wallet creation and import
+- Transaction preparation, signing, and execution
+- Real-time ETH price data
+- Transaction history and statistics
 
-## What technologies are used for this project?
+## Security Considerations
 
-This project is built with:
+- Private keys and mnemonics are handled securely
+- All transactions require proper message signing
+- JWT tokens are managed with automatic refresh
+- Input validation using Zod schemas
+- Secure API communication with interceptors
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Development
 
-## How can I deploy this project?
+### Available Scripts
 
-Simply open [Lovable](https://lovable.dev/projects/5578d72b-9e1a-46ae-b6e9-74a3e74caee0) and click on Share -> Publish.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
 
-## Can I connect a custom domain to my Lovable project?
+### Environment Variables
 
-Yes, you can!
+- `VITE_API_BASE_URL` - Backend API base URL (required)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Contributing
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support and questions, please open an issue in the repository.

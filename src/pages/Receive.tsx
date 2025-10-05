@@ -17,8 +17,8 @@ const Receive = () => {
   useEffect(() => {
     const currentUser = getCurrentUser();
     const currentWallet = getWallet();
-    
-    if (!currentUser || !currentUser.isLoggedIn || !currentWallet) {
+
+    if (!currentUser || !currentWallet) {
       navigate('/login');
       return;
     }
@@ -106,8 +106,8 @@ const Receive = () => {
 
             {/* Action Buttons */}
             <div className="w-full grid grid-cols-2 gap-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="border-border"
                 onClick={handleCopyAddress}
               >
@@ -124,7 +124,7 @@ const Receive = () => {
                 )}
               </Button>
 
-              <Button 
+              <Button
                 className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
                 onClick={handleShareAddress}
               >

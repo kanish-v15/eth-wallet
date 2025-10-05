@@ -10,7 +10,7 @@ export interface WalletData {
 export const generateWallet = (): WalletData => {
   const wallet = ethers.Wallet.createRandom();
   const balance = (Math.random() * 9 + 1).toFixed(4); // Random 1-10 ETH
-  
+
   return {
     mnemonic: wallet.mnemonic.phrase,
     address: wallet.address,
@@ -23,7 +23,7 @@ export const importWallet = (mnemonic: string): WalletData | null => {
   try {
     const wallet = ethers.Wallet.fromMnemonic(mnemonic);
     const balance = (Math.random() * 9 + 1).toFixed(4);
-    
+
     return {
       mnemonic: wallet.mnemonic.phrase,
       address: wallet.address,
@@ -51,14 +51,16 @@ export const formatAddress = (address: string): string => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
-export const ethToUsd = (eth: string): string => {
+// These functions are now deprecated - use priceApi instead
+// Keeping for backward compatibility with default fallback
+export const ethToUsd = (eth: string, price: number = 2500): string => {
   const ethAmount = parseFloat(eth);
-  const usdAmount = ethAmount * 2500;
+  const usdAmount = ethAmount * price;
   return usdAmount.toFixed(2);
 };
 
-export const usdToEth = (usd: string): string => {
+export const usdToEth = (usd: string, price: number = 2500): string => {
   const usdAmount = parseFloat(usd);
-  const ethAmount = usdAmount / 2500;
+  const ethAmount = usdAmount / price;
   return ethAmount.toFixed(6);
 };

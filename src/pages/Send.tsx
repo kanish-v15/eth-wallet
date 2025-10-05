@@ -7,10 +7,11 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, ArrowUpRight, AlertCircle } from 'lucide-react';
 import { getWallet, getCurrentUser, addTransaction } from '@/utils/storage';
-import { ethToUsd, usdToEth, signMessage } from '@/utils/wallet';
+import { ethToUsd, usdToEth } from '@/utils/wallet';
 import { toast } from 'react-hot-toast';
 import { sendTransactionSchema, getValidationError } from '@/utils/validation';
 import { ethers } from 'ethers';
+import { transferApi, walletApi, priceApi, handleApiError } from '@/utils/api';
 
 const Send = () => {
   const navigate = useNavigate();
@@ -21,18 +22,34 @@ const Send = () => {
   const [showModal, setShowModal] = useState(false);
   const [countdown, setCountdown] = useState(30);
   const [isSigning, setIsSigning] = useState(false);
+  const [ethPrice, setEthPrice] = useState(2500);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
     const currentWallet = getWallet();
-    
-    if (!currentUser || !currentUser.isLoggedIn || !currentWallet) {
+
+    if (!currentUser || !currentWallet) {
       navigate('/login');
       return;
     }
 
     setWallet(currentWallet);
+
+    // Fetch live ETH price
+    fetchEthPrice();
   }, [navigate]);
+
+  const fetchEthPrice = async () => {
+    try {
+      const response = await priceApi.getEthPrice();
+      if (response.success && response.price) {
+        setEthPrice(response.price);
+      }
+    } catch (error) {
+      console.error('Failed to fetch ETH price:', error);
+      // Keep default price
+    }
+  };
 
   useEffect(() => {
     if (showModal && countdown > 0) {
@@ -77,41 +94,123 @@ const Send = () => {
   };
 
   const handleSignAndSend = async () => {
-    if (!wallet) return;
+    if (!wallet) {
+      toast.error('Wallet not found');
+      return;
+    }
 
     setIsSigning(true);
-    
+
     try {
-      const ethAmount = currency === 'ETH' ? amount : usdToEth(amount);
-      const message = `Transfer ${ethAmount} ETH to ${recipient}`;
-      
-      // Sign the message
-      const signature = await signMessage(wallet.privateKey, message);
-      
-      // Simulate transaction
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Add transaction to history
-      const transaction = {
-        id: 'tx_' + Date.now(),
-        type: 'sent' as const,
-        amount: ethAmount,
-        address: recipient,
-        timestamp: Date.now(),
-        status: 'success' as const,
-      };
-      
-      addTransaction(transaction);
-      
-      // Update balance
-      const newBalance = (parseFloat(wallet.balance) - parseFloat(ethAmount)).toFixed(4);
-      const updatedWallet = { ...wallet, balance: newBalance };
-      localStorage.setItem('wallet', JSON.stringify(updatedWallet));
-      
-      toast.success('Transaction sent successfully!');
+      // 🔥 STEP 1: PREPARE TRANSFER WITH BACKEND
+      console.log('Step 1: Preparing transfer...');
+      let prepareResponse;
+
+      if (currency === 'ETH') {
+        prepareResponse = await transferApi.prepareTransfer(
+          wallet.address,
+          recipient,
+          parseFloat(amount)
+        );
+      } else {
+        prepareResponse = await transferApi.prepareTransferUSD(
+          wallet.address,
+          recipient,
+          parseFloat(amount)
+        );
+      }
+
+      console.log('Prepare response:', prepareResponse);
+
+      if (!prepareResponse.success) {
+        toast.error(prepareResponse.message || 'Failed to prepare transaction');
+        return;
+      }
+
+      const messageToSign = prepareResponse.message;
+
+      // 🔥 STEP 2: GET WALLET MNEMONIC
+      console.log('Step 2: Fetching wallet mnemonic...');
+      const walletsResponse = await walletApi.list(true);
+      console.log('Wallets with mnemonics:', walletsResponse);
+
+      if (!walletsResponse.wallets) {
+        toast.error('Failed to fetch wallet information');
+        return;
+      }
+
+      // Find the current wallet in the list
+      const currentWalletData = walletsResponse.wallets.find(
+        (w: any) => w.address.toLowerCase() === wallet.address.toLowerCase()
+      );
+
+      if (!currentWalletData || !currentWalletData.mnemonic) {
+        toast.error('Wallet mnemonic not found. Cannot sign transaction.');
+        return;
+      }
+
+      // 🔥 STEP 3: SIGN MESSAGE WITH MNEMONIC
+      console.log('Step 3: Signing message...');
+      const signResponse = await walletApi.signMessage(
+        messageToSign,
+        wallet.address,
+        currentWalletData.mnemonic
+      );
+
+      console.log('Sign response:', signResponse);
+
+      if (!signResponse.success || !signResponse.signature) {
+        toast.error(signResponse.message || 'Failed to sign transaction');
+        return;
+      }
+
+      const signature = signResponse.signature;
+
+      // 🔥 STEP 4: EXECUTE TRANSFER WITH SIGNATURE
+      console.log('Step 4: Executing transfer...');
+      const executeResponse = await transferApi.executeTransfer(
+        messageToSign,
+        signature,
+        wallet.address
+      );
+
+      console.log('Execute response:', executeResponse);
+
+      if (!executeResponse.success) {
+        toast.error(executeResponse.message || 'Transaction execution failed');
+        return;
+      }
+
+      // STEP 5: ADD TRANSACTION TO LOCAL HISTORY
+      if (executeResponse.transaction) {
+        const transaction = {
+          id: executeResponse.transaction.id,
+          from_address: executeResponse.transaction.from_address,
+          to_address: executeResponse.transaction.to_address,
+          amount: executeResponse.transaction.amount.toString(),
+          status: executeResponse.transaction.status as 'completed' | 'pending' | 'failed',
+          signature: executeResponse.transaction.signature,
+          created_at: executeResponse.transaction.created_at,
+        };
+
+        addTransaction(transaction);
+      }
+
+      // STEP 6: UPDATE LOCAL BALANCE
+      const ethAmount = prepareResponse.amount || prepareResponse.eth_amount;
+      if (ethAmount) {
+        const newBalance = (parseFloat(wallet.balance) - parseFloat(ethAmount)).toFixed(4);
+        const updatedWallet = { ...wallet, balance: newBalance };
+        localStorage.setItem('wallet', JSON.stringify(updatedWallet));
+      }
+
+      toast.success('Transaction sent successfully! 🔥');
+      setShowModal(false);
       navigate('/dashboard');
     } catch (error) {
-      toast.error('Transaction failed. Please try again.');
+      const errorMessage = handleApiError(error);
+      toast.error(errorMessage);
+      console.error('Transaction error:', error);
     } finally {
       setIsSigning(false);
     }
@@ -121,10 +220,10 @@ const Send = () => {
     return null;
   }
 
-  const displayAmount = currency === 'ETH' ? amount : (amount ? ethToUsd(usdToEth(amount)) : '');
-  const convertedAmount = currency === 'ETH' 
-    ? (amount ? `≈ $${ethToUsd(amount)}` : '')
-    : (amount ? `≈ ${usdToEth(amount)} ETH` : '');
+  const displayAmount = currency === 'ETH' ? amount : (amount ? ethToUsd(usdToEth(amount, ethPrice), ethPrice) : '');
+  const convertedAmount = currency === 'ETH'
+    ? (amount ? `≈ $${ethToUsd(amount, ethPrice)}` : '')
+    : (amount ? `≈ ${usdToEth(amount, ethPrice)} ETH` : '');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary">
@@ -203,7 +302,7 @@ const Send = () => {
               </div>
             </div>
 
-            <Button 
+            <Button
               className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold"
               onClick={handleReview}
             >
@@ -234,7 +333,7 @@ const Send = () => {
               {currency === 'USD' && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ETH Amount</span>
-                  <span className="text-foreground">{usdToEth(amount)} ETH</span>
+                  <span className="text-foreground">{usdToEth(amount, ethPrice)} ETH</span>
                 </div>
               )}
             </div>
@@ -242,7 +341,7 @@ const Send = () => {
             <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
               <p className="text-sm text-destructive mb-2 font-semibold">Message to Sign:</p>
               <p className="text-xs text-destructive/80 font-mono break-all">
-                Transfer {currency === 'ETH' ? amount : usdToEth(amount)} ETH to {recipient}
+                Transfer {currency === 'ETH' ? amount : usdToEth(amount, ethPrice)} ETH to {recipient}
               </p>
             </div>
 
@@ -252,7 +351,7 @@ const Send = () => {
               </div>
             </div>
 
-            <Button 
+            <Button
               className="w-full bg-gradient-to-r from-destructive to-destructive/80 text-destructive-foreground font-semibold"
               onClick={handleSignAndSend}
               disabled={isSigning}

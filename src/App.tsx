@@ -11,6 +11,9 @@ import Dashboard from "./pages/Dashboard";
 import Send from "./pages/Send";
 import History from "./pages/History";
 import Receive from "./pages/Receive";
+import Profile from "./pages/Profile";
+import Wallets from "./pages/Wallets";
+import TransactionDetails from "./pages/TransactionDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,7 +23,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <HotToaster 
+      <HotToaster
         position="top-center"
         toastOptions={{
           style: {
@@ -40,6 +43,9 @@ const App = () => (
           <Route path="/send" element={<Send />} />
           <Route path="/history" element={<History />} />
           <Route path="/receive" element={<Receive />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/wallets" element={<Wallets />} />
+          <Route path="/transaction/:id" element={<TransactionDetails />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
